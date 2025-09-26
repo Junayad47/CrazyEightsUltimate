@@ -27,9 +27,11 @@ class MultiplayerManager {
             }
         }
         
-        // WebSocket connection
+        // WebSocket connection - use relative URL for deployment
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.hostname}:8080`;
+        const host = window.location.hostname || 'localhost';
+        const port = window.location.port || '8080';
+        const wsUrl = `${protocol}//${host}:${port}`;
         
         try {
             GameState.ws = new WebSocket(wsUrl);
@@ -56,8 +58,8 @@ class MultiplayerManager {
             
             GameState.ws.onerror = (error) => {
                 console.error('WebSocket error:', error);
-                game.showNotification('Connection error!', 'warning');
-                this.handleConnectionError();
+                game.showNotification('Connection error! Playing offline.', 'warning');
+                this.playOffline();
             };
             
             GameState.ws.onclose = () => {
@@ -116,7 +118,7 @@ class MultiplayerManager {
                 break;
                 
             case 'turnUpdate':
-                GameState.currentTurn = data.currentTurn === this.playerId ? 'player' : 'opponent';
+                GameState.currentTurn = data.currentPlayer === this.playerId ? 'player' : 'opponent';
                 game.updateUI();
                 break;
                 
@@ -263,6 +265,7 @@ class MultiplayerManager {
         GameState.currentTurn = gameState.currentPlayer === this.playerId ? 'player' : 'opponent';
         GameState.stackCount = gameState.stackCount || 0;
         GameState.gameActive = true;
+        GameState.mustDrawPenalty = gameState.stackCount > 0 && GameState.currentTurn === 'player';
         
         game.updateUI();
         game.showNotification('Game started!', 'success');
@@ -419,11 +422,11 @@ class MultiplayerManager {
             }
         };
         
-        game.drawCard = () => {
+        game.drawCard = (forced = false) => {
             if (GameState.gameMode === 'online') {
                 this.sendDraw();
             } else {
-                originalDrawCard();
+                originalDrawCard(forced);
             }
         };
         

@@ -15,13 +15,14 @@ const GameState = {
     soundEnabled: true,
     ws: null,
     gameActive: false,
-    turnSkipped: false,
     currentSuit: null,
     playerName: 'Player',
     opponentName: 'Opponent',
-    animationSpeed: 1000, // Slower animations
-    messageQueue: [],
-    processingAction: false
+    animationSpeed: 1000,
+    processingAction: false,
+    playerGoesAgain: false,
+    opponentGoesAgain: false,
+    mustDrawPenalty: false
 };
 
 // Card Class
@@ -45,7 +46,7 @@ class Card {
     
     getDescription() {
         if (this.rank === '8') return 'Wild Card - Choose any suit';
-        if (this.rank === 'J') return 'Jack - Skip next player';
+        if (this.rank === 'J') return 'Jack - Play again';
         if (this.rank === 'Q' && this.suit === '♠') return 'Queen of Spades - Next player draws 5';
         if (this.rank === '2') return 'Two - Next player draws 2';
         return '';
@@ -65,24 +66,22 @@ class CrazyEightsGame {
     }
     
     initNameInput() {
-        // Get player name from localStorage or prompt
+        // Get player name from localStorage
         const savedName = localStorage.getItem('playerName');
         if (savedName) {
             GameState.playerName = savedName;
-        } else {
-            this.promptPlayerName();
+            document.getElementById('playerNameDisplay').textContent = savedName;
         }
     }
     
     promptPlayerName() {
-        setTimeout(() => {
-            const name = prompt('Enter your name:', GameState.playerName);
-            if (name && name.trim()) {
-                GameState.playerName = name.trim();
-                localStorage.setItem('playerName', GameState.playerName);
-                this.addGameLog(`Welcome, ${GameState.playerName}!`, 'system');
-            }
-        }, 500);
+        const name = prompt('Enter your name:', GameState.playerName);
+        if (name && name.trim()) {
+            GameState.playerName = name.trim();
+            localStorage.setItem('playerName', GameState.playerName);
+            document.getElementById('playerNameDisplay').textContent = GameState.playerName;
+            this.addGameLog(`Welcome, ${GameState.playerName}!`, 'system');
+        }
     }
     
     createSuitSelector() {
@@ -115,193 +114,6 @@ class CrazyEightsGame {
         `;
         document.body.appendChild(suitModal);
         
-        // Add styles
-        const style = document.createElement('style');
-        style.textContent = `
-            .suit-selector-modal {
-                display: none;
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background: linear-gradient(135deg, #2a1810 0%, #1a0e08 100%);
-                border: 3px solid #d4af37;
-                border-radius: 15px;
-                padding: 30px;
-                z-index: 1000;
-                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
-            }
-            
-            .suit-selector-modal.active {
-                display: block;
-                animation: slideIn 0.3s ease-out;
-            }
-            
-            @keyframes slideIn {
-                from {
-                    opacity: 0;
-                    transform: translate(-50%, -60%);
-                }
-                to {
-                    opacity: 1;
-                    transform: translate(-50%, -50%);
-                }
-            }
-            
-            .suit-selector-content h3 {
-                color: #d4af37;
-                font-family: 'Bebas Neue', cursive;
-                font-size: 32px;
-                text-align: center;
-                margin-bottom: 25px;
-                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-            }
-            
-            .suit-options {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 15px;
-            }
-            
-            .suit-btn {
-                padding: 20px;
-                background: linear-gradient(135deg, #8b4513 0%, #654321 100%);
-                border: 2px solid #d4af37;
-                border-radius: 10px;
-                cursor: pointer;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 10px;
-                transition: all 0.3s ease;
-                color: #f0e6d2;
-                font-weight: bold;
-                font-size: 16px;
-            }
-            
-            .suit-btn:hover {
-                transform: scale(1.05);
-                box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4);
-                background: linear-gradient(135deg, #a0522d 0%, #8b4513 100%);
-            }
-            
-            .suit-icon {
-                font-size: 48px;
-            }
-            
-            .suit-icon.red {
-                color: #ff4444;
-                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-            }
-            
-            .suit-icon.black {
-                color: #333;
-                text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.3);
-            }
-            
-            .game-log {
-                position: fixed;
-                left: 20px;
-                top: 50%;
-                transform: translateY(-50%);
-                width: 280px;
-                max-height: 400px;
-                background: linear-gradient(135deg, rgba(26, 14, 8, 0.95) 0%, rgba(0, 0, 0, 0.95) 100%);
-                border: 2px solid #d4af37;
-                border-radius: 10px;
-                padding: 15px;
-                overflow-y: auto;
-                z-index: 50;
-            }
-            
-            .game-log-title {
-                font-family: 'Bebas Neue', cursive;
-                font-size: 20px;
-                color: #d4af37;
-                margin-bottom: 10px;
-                text-align: center;
-            }
-            
-            .game-log-content {
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-                max-height: 320px;
-                overflow-y: auto;
-                padding-right: 5px;
-            }
-            
-            .game-log-content::-webkit-scrollbar {
-                width: 6px;
-            }
-            
-            .game-log-content::-webkit-scrollbar-track {
-                background: rgba(0, 0, 0, 0.3);
-                border-radius: 3px;
-            }
-            
-            .game-log-content::-webkit-scrollbar-thumb {
-                background: #d4af37;
-                border-radius: 3px;
-            }
-            
-            .log-entry {
-                padding: 8px 10px;
-                background: rgba(0, 0, 0, 0.3);
-                border-left: 3px solid #666;
-                border-radius: 5px;
-                font-size: 13px;
-                color: #f0e6d2;
-                animation: slideInLog 0.3s ease-out;
-            }
-            
-            @keyframes slideInLog {
-                from {
-                    opacity: 0;
-                    transform: translateX(-20px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateX(0);
-                }
-            }
-            
-            .log-entry.player {
-                border-left-color: #4caf50;
-                background: rgba(76, 175, 80, 0.1);
-            }
-            
-            .log-entry.opponent {
-                border-left-color: #f44336;
-                background: rgba(244, 67, 54, 0.1);
-            }
-            
-            .log-entry.special {
-                border-left-color: #d4af37;
-                background: rgba(212, 175, 55, 0.1);
-                font-weight: bold;
-            }
-            
-            .log-entry.system {
-                border-left-color: #2196f3;
-                background: rgba(33, 150, 243, 0.1);
-                font-style: italic;
-            }
-            
-            .log-timestamp {
-                font-size: 10px;
-                color: #888;
-                margin-right: 5px;
-            }
-            
-            @media (max-width: 1200px) {
-                .game-log {
-                    display: none;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-        
         // Add event listeners to suit buttons
         document.querySelectorAll('.suit-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -312,36 +124,18 @@ class CrazyEightsGame {
     }
     
     createGameLog() {
-        const gameLog = document.createElement('div');
-        gameLog.className = 'game-log';
-        gameLog.innerHTML = `
-            <div class="game-log-title">GAME LOG</div>
-            <div class="game-log-content" id="gameLogContent"></div>
-        `;
-        document.body.appendChild(gameLog);
+        // Game log is now in the header
     }
     
     addGameLog(message, type = 'default') {
         const logContent = document.getElementById('gameLogContent');
         if (!logContent) return;
         
-        const entry = document.createElement('div');
-        entry.className = `log-entry ${type}`;
+        logContent.innerHTML = message;
         
-        const timestamp = new Date().toLocaleTimeString('en-US', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-        });
-        
-        entry.innerHTML = `<span class="log-timestamp">${timestamp}</span>${message}`;
-        logContent.appendChild(entry);
-        
-        // Auto-scroll to bottom
-        logContent.scrollTop = logContent.scrollHeight;
-        
-        // Keep only last 50 entries
-        while (logContent.children.length > 50) {
-            logContent.removeChild(logContent.firstChild);
+        // Also show as notification for important messages
+        if (type === 'special' || type === 'system') {
+            this.showNotification(message, type === 'special' ? 'success' : 'default');
         }
     }
     
@@ -535,6 +329,7 @@ class CrazyEightsGame {
         if (GameState.gameMode === 'local') {
             const aiNames = ['Wild Bill', 'Doc Holliday', 'Jesse James', 'Wyatt Earp', 'Billy the Kid', 'Calamity Jane'];
             GameState.opponentName = aiNames[Math.floor(Math.random() * aiNames.length)];
+            document.getElementById('opponentName').textContent = GameState.opponentName;
         }
         
         GameState.playerHand = [];
@@ -545,20 +340,18 @@ class CrazyEightsGame {
         GameState.stackCount = 0;
         GameState.calledGame = false;
         GameState.gameActive = true;
-        GameState.turnSkipped = false;
+        GameState.playerGoesAgain = false;
+        GameState.opponentGoesAgain = false;
+        GameState.mustDrawPenalty = false;
         GameState.processingAction = false;
         
-        this.addGameLog('=== NEW GAME STARTED ===', 'system');
-        this.addGameLog('Shuffling deck...', 'system');
+        this.addGameLog('New game started!', 'system');
         
         // Deal 8 cards to each player
         for (let i = 0; i < 8; i++) {
             GameState.playerHand.push(GameState.drawPile.pop());
             GameState.opponentHand.push(GameState.drawPile.pop());
         }
-        
-        this.addGameLog(`Dealt 8 cards to ${GameState.playerName}`, 'system');
-        this.addGameLog(`Dealt 8 cards to ${GameState.opponentName}`, 'system');
         
         // Start discard pile with non-special card
         let startCard;
@@ -571,7 +364,14 @@ class CrazyEightsGame {
         
         this.addGameLog(`Starting card: ${startCard.toString()}`, 'system');
         
+        // Randomly decide who goes first
+        GameState.currentTurn = Math.random() < 0.5 ? 'player' : 'opponent';
+        
         this.updateUI();
+        
+        if (GameState.currentTurn === 'opponent') {
+            setTimeout(() => this.opponentTurn(), 2000);
+        }
     }
     
     updateUI() {
@@ -631,19 +431,6 @@ class CrazyEightsGame {
                 const suitIndicator = document.createElement('div');
                 suitIndicator.className = 'current-suit-indicator';
                 suitIndicator.innerHTML = `Current Suit: <span style="font-size: 24px;">${GameState.currentSuit}</span>`;
-                suitIndicator.style.cssText = `
-                    position: absolute;
-                    bottom: -40px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    background: rgba(212, 175, 55, 0.2);
-                    padding: 5px 15px;
-                    border-radius: 20px;
-                    border: 2px solid #d4af37;
-                    color: #f0e6d2;
-                    font-weight: bold;
-                    font-size: 14px;
-                `;
                 discardPileEl.appendChild(suitIndicator);
             }
         }
@@ -688,6 +475,11 @@ class CrazyEightsGame {
         
         // Update buttons state
         this.updateButtonStates();
+        
+        // Check if player must draw penalty
+        if (GameState.mustDrawPenalty && GameState.currentTurn === 'player' && GameState.stackCount > 0) {
+            setTimeout(() => this.forcePenaltyDraw(), 1000);
+        }
     }
     
     updateButtonStates() {
@@ -784,11 +576,6 @@ class CrazyEightsGame {
     }
     
     canPlayCard(card, topCard) {
-        // Wild 8 can always be played
-        if (card.rank === '8') return true;
-        
-        // Match current suit (which might be different from top card due to wild 8)
-        // or match rank
         const currentSuit = GameState.currentSuit || topCard.suit;
         return card.suit === currentSuit || card.rank === topCard.rank;
     }
@@ -808,7 +595,6 @@ class CrazyEightsGame {
         // Validate all selected cards can be played
         if (!this.validateSelectedCards()) {
             this.showNotification('Invalid move!', 'warning');
-            this.addGameLog('Invalid move attempted', 'player');
             if (this.soundEffects) this.soundEffects.error();
             GameState.processingAction = false;
             return;
@@ -820,7 +606,6 @@ class CrazyEightsGame {
             
             if (lastCard.rank === '2' || lastCard.rank === '8') {
                 this.showNotification('Cannot end with 2 or 8!', 'warning');
-                this.addGameLog('Cannot end game with 2 or 8!', 'system');
                 if (this.soundEffects) this.soundEffects.error();
                 GameState.processingAction = false;
                 return;
@@ -828,10 +613,19 @@ class CrazyEightsGame {
             
             if (!GameState.calledGame) {
                 this.showNotification('You must call "GAME" first!', 'warning');
-                this.addGameLog('Must call GAME before playing last card!', 'system');
                 if (this.soundEffects) this.soundEffects.error();
                 GameState.processingAction = false;
                 return;
+            }
+        }
+        
+        // Clear must draw penalty if playing a 2 or Q♠
+        if (GameState.stackCount > 0) {
+            const hasStackCard = cardsToPlay.some(card => 
+                card.rank === '2' || (card.rank === 'Q' && card.suit === '♠')
+            );
+            if (hasStackCard) {
+                GameState.mustDrawPenalty = false;
             }
         }
         
@@ -840,6 +634,8 @@ class CrazyEightsGame {
         this.addGameLog(`${GameState.playerName} plays ${cardsString}`, 'player');
         
         // Play the cards with animation delay
+        let hasJack = false;
+        let hasEight = false;
         for (let i = 0; i < cardsToPlay.length; i++) {
             const card = cardsToPlay[i];
             
@@ -847,29 +643,16 @@ class CrazyEightsGame {
             
             GameState.discardPile.push(card);
             
-            // Animate special card effect
-            if (card.isSpecial()) {
-                const discardPileEl = document.getElementById('discardPile');
-                if (discardPileEl && discardPileEl.firstChild) {
-                    discardPileEl.firstChild.classList.add('special-played');
-                    setTimeout(() => {
-                        if (discardPileEl.firstChild) {
-                            discardPileEl.firstChild.classList.remove('special-played');
-                        }
-                    }, 600);
-                }
-            }
-            
             // Handle special cards
             if (card.rank === '8') {
-                // Show suit selector and wait for selection
-                GameState.processingAction = false; // Allow suit selection
-                await this.showSuitSelector();
-                GameState.processingAction = true;
-                // Suit will be set by onSuitSelected
+                hasEight = true;
+                // Will show suit selector after
             } else {
                 GameState.currentSuit = card.suit;
                 this.handleSpecialCard(card);
+                if (card.rank === 'J') {
+                    hasJack = true;
+                }
             }
         }
         
@@ -897,27 +680,38 @@ class CrazyEightsGame {
             return;
         }
         
+        // Handle Jack effect - player goes again
+        if (hasJack) {
+            this.addGameLog('Jack played - You play again!', 'special');
+            this.showNotification('Jack played - Play again!', 'success');
+            GameState.playerGoesAgain = true;
+        } else {
+            GameState.playerGoesAgain = false;
+        }
+        
         GameState.processingAction = false;
         
-        // Only continue if 8 wasn't played (suit selector will handle continuation)
-        if (!cardsToPlay.some(card => card.rank === '8')) {
+        // Handle 8 - show suit selector
+        if (hasEight) {
+            GameState.processingAction = false; // Allow suit selection
+            await this.showSuitSelector();
+            GameState.processingAction = true;
+            // Suit will be set by onSuitSelected
+        } else {
             this.finishPlayerTurn();
         }
     }
     
     finishPlayerTurn() {
-        // Check if next turn should be skipped (Jack effect)
-        if (GameState.turnSkipped) {
-            GameState.turnSkipped = false;
-            this.addGameLog(`${GameState.opponentName}'s turn skipped!`, 'special');
-            this.showNotification('Opponent\'s turn skipped!', 'success');
-            if (this.soundEffects) this.soundEffects.skip();
-            
-            // Stay on player's turn
+        // If player has Jack effect, they go again
+        if (GameState.playerGoesAgain) {
+            GameState.playerGoesAgain = false;
+            // Player keeps their turn
             this.updateUI();
         } else {
-            // Switch turn
+            // Switch turn to opponent
             GameState.currentTurn = 'opponent';
+            GameState.mustDrawPenalty = GameState.stackCount > 0;
             this.updateUI();
             
             // AI opponent's turn after delay
@@ -927,22 +721,29 @@ class CrazyEightsGame {
     
     handleSpecialCard(card) {
         if (card.rank === 'J') {
-            GameState.turnSkipped = true;
-            this.showNotification('Jack played - Skip next turn!', 'special');
-            this.addGameLog('Jack played - Next turn will be skipped', 'special');
+            // Jack effect handled in playSelectedCards
         } else if (card.rank === 'Q' && card.suit === '♠') {
             GameState.stackCount += 5;
             this.showNotification('Queen of Spades! +5 cards', 'warning');
-            this.addGameLog('Queen of Spades - Stack +5 cards', 'special');
         } else if (card.rank === '2') {
             GameState.stackCount += 2;
-            this.showNotification(`Two played! +2 cards (Total: ${GameState.stackCount})`, 'warning');
-            this.addGameLog(`Two played - Stack +2 (Total: ${GameState.stackCount})`, 'special');
+            this.showNotification(`Two played! Stack: ${GameState.stackCount} cards`, 'warning');
         }
     }
     
-    async drawCard() {
-        if (GameState.currentTurn !== 'player' || !GameState.gameActive || GameState.processingAction) return;
+    async forcePenaltyDraw() {
+        if (GameState.stackCount > 0 && GameState.currentTurn === 'player' && GameState.mustDrawPenalty) {
+            this.showNotification(`Drawing ${GameState.stackCount} penalty cards!`, 'warning');
+            this.addGameLog(`${GameState.playerName} must draw ${GameState.stackCount} cards`, 'system');
+            
+            await this.drawCard(true); // Force draw
+        }
+    }
+    
+    async drawCard(forced = false) {
+        if (GameState.currentTurn !== 'player' || !GameState.gameActive || GameState.processingAction) {
+            if (!forced) return;
+        }
         
         GameState.processingAction = true;
         
@@ -951,7 +752,7 @@ class CrazyEightsGame {
         // Handle stacked draw
         if (GameState.stackCount > 0) {
             cardsDrawn = GameState.stackCount;
-            this.addGameLog(`${GameState.playerName} draws ${cardsDrawn} cards (stack)`, 'player');
+            this.addGameLog(`${GameState.playerName} draws ${cardsDrawn} cards`, 'player');
             
             for (let i = 0; i < cardsDrawn; i++) {
                 await this.delay(100);
@@ -961,13 +762,24 @@ class CrazyEightsGame {
                 }
             }
             GameState.stackCount = 0;
+            GameState.mustDrawPenalty = false;
             this.showNotification(`Drew ${cardsDrawn} cards from stack!`, 'warning');
         } else {
             if (GameState.drawPile.length === 0) this.reshuffleDeck();
             if (GameState.drawPile.length > 0) {
-                GameState.playerHand.push(GameState.drawPile.pop());
+                const drawnCard = GameState.drawPile.pop();
+                GameState.playerHand.push(drawnCard);
                 cardsDrawn = 1;
                 this.addGameLog(`${GameState.playerName} draws 1 card`, 'player');
+                
+                // Check if drawn card can be played immediately
+                const topCard = GameState.discardPile[GameState.discardPile.length - 1];
+                if (this.canPlayCard(drawnCard, topCard)) {
+                    this.showNotification('You can play the drawn card!', 'success');
+                    GameState.processingAction = false;
+                    this.updateUI();
+                    return; // Stay on player's turn
+                }
             }
         }
         
@@ -975,6 +787,7 @@ class CrazyEightsGame {
         
         GameState.processingAction = false;
         GameState.currentTurn = 'opponent';
+        GameState.mustDrawPenalty = false;
         this.updateUI();
         
         setTimeout(() => this.opponentTurn(), 2000);
@@ -994,7 +807,6 @@ class CrazyEightsGame {
         }
         
         this.showNotification('Deck reshuffled!', 'success');
-        this.addGameLog('Deck reshuffled', 'system');
     }
     
     async opponentTurn() {
@@ -1002,35 +814,23 @@ class CrazyEightsGame {
         
         GameState.processingAction = true;
         
-        // Check if turn was skipped
-        if (GameState.turnSkipped) {
-            GameState.turnSkipped = false;
-            this.addGameLog(`${GameState.playerName}'s turn skipped!`, 'special');
-            this.showNotification('Your turn was skipped!', 'warning');
-            if (this.soundEffects) this.soundEffects.skip();
-            
-            // Stay on opponent's turn for another play
-            await this.delay(1500);
-            this.opponentTurn();
-            return;
-        }
-        
         const topCard = GameState.discardPile[GameState.discardPile.length - 1];
         
         // Check for stacked draw
-        if (GameState.stackCount > 0) {
+        if (GameState.stackCount > 0 && GameState.mustDrawPenalty) {
             // AI tries to play a 2 or Queen of Spades
             const stackCards = GameState.opponentHand.filter(card => 
-                (card.rank === '2' || (card.rank === 'Q' && card.suit === '♠')) &&
-                this.canPlayCard(card, topCard)
+                ((card.rank === '2' || (card.rank === 'Q' && card.suit === '♠')) &&
+                this.canPlayCard(card, topCard))
             );
             
             if (stackCards.length > 0) {
-                // Play all matching stack cards
-                const cardsToPlay = stackCards.filter(c => c.rank === stackCards[0].rank);
+                // Play stack card
+                const cardsToPlay = stackCards.slice(0, 1); // Play one at a time for simplicity
                 const cardsString = cardsToPlay.map(c => c.toString()).join(', ');
                 this.addGameLog(`${GameState.opponentName} plays ${cardsString}`, 'opponent');
                 
+                let hasJack = false;
                 for (const card of cardsToPlay) {
                     await this.delay(300);
                     GameState.discardPile.push(card);
@@ -1038,13 +838,31 @@ class CrazyEightsGame {
                     GameState.opponentHand.splice(index, 1);
                     GameState.currentSuit = card.suit;
                     this.handleSpecialCard(card);
+                    if (card.rank === 'J') hasJack = true;
                 }
                 
                 if (this.soundEffects) this.soundEffects.special();
+                GameState.mustDrawPenalty = false;
+                
+                // Check for win
+                if (GameState.opponentHand.length === 0) {
+                    this.endGame('opponent');
+                    GameState.processingAction = false;
+                    return;
+                }
+                
+                // Handle Jack effect
+                if (hasJack) {
+                    this.addGameLog(`${GameState.opponentName} plays again!`, 'special');
+                    GameState.processingAction = false;
+                    this.updateUI();
+                    setTimeout(() => this.opponentTurn(), 2000);
+                    return;
+                }
             } else {
                 // Draw the stacked cards
                 const drawCount = GameState.stackCount;
-                this.addGameLog(`${GameState.opponentName} draws ${drawCount} cards (stack)`, 'opponent');
+                this.addGameLog(`${GameState.opponentName} draws ${drawCount} cards`, 'opponent');
                 
                 for (let i = 0; i < drawCount; i++) {
                     await this.delay(100);
@@ -1054,6 +872,7 @@ class CrazyEightsGame {
                     }
                 }
                 GameState.stackCount = 0;
+                GameState.mustDrawPenalty = false;
                 if (this.soundEffects) this.soundEffects.cardDraw();
             }
         } else {
@@ -1063,68 +882,32 @@ class CrazyEightsGame {
             );
             
             if (playableCards.length > 0) {
-                // Group by rank to play multiple cards
-                const cardsByRank = {};
-                playableCards.forEach(card => {
-                    if (!cardsByRank[card.rank]) {
-                        cardsByRank[card.rank] = [];
-                    }
-                    cardsByRank[card.rank].push(card);
-                });
+                // AI strategy - pick best card to play
+                let cardToPlay = playableCards[0];
                 
-                // AI strategy: prefer special cards when player has few cards
-                let cardsToPlay;
-                
+                // Prefer special cards when player has few cards
                 if (GameState.playerHand.length <= 3) {
-                    // Play special cards
-                    const specialRanks = ['2', 'Q', 'J', '8'];
-                    const specialGroup = specialRanks.find(rank => cardsByRank[rank]);
-                    cardsToPlay = specialGroup ? cardsByRank[specialGroup] : Object.values(cardsByRank)[0];
-                } else {
-                    // Play the group with most cards
-                    cardsToPlay = Object.values(cardsByRank).reduce((a, b) => 
-                        a.length > b.length ? a : b
-                    );
+                    const specialCard = playableCards.find(c => c.isSpecial());
+                    if (specialCard) cardToPlay = specialCard;
                 }
                 
                 // Check if AI is about to win
-                if (GameState.opponentHand.length === cardsToPlay.length) {
-                    const lastCard = cardsToPlay[cardsToPlay.length - 1];
-                    if (lastCard.rank === '2' || lastCard.rank === '8') {
+                if (GameState.opponentHand.length === 1) {
+                    if (cardToPlay.rank === '2' || cardToPlay.rank === '8') {
                         // Draw instead
-                        this.addGameLog(`${GameState.opponentName} draws 1 card (can't end with ${lastCard.rank})`, 'opponent');
+                        this.addGameLog(`${GameState.opponentName} draws 1 card`, 'opponent');
                         if (GameState.drawPile.length === 0) this.reshuffleDeck();
                         if (GameState.drawPile.length > 0) {
                             GameState.opponentHand.push(GameState.drawPile.pop());
                         }
                         if (this.soundEffects) this.soundEffects.cardDraw();
                     } else {
-                        // Play the cards
-                        const cardsString = cardsToPlay.map(c => c.toString()).join(', ');
-                        this.addGameLog(`${GameState.opponentName} plays ${cardsString}`, 'opponent');
-                        
-                        for (const card of cardsToPlay) {
-                            await this.delay(300);
-                            GameState.discardPile.push(card);
-                            const index = GameState.opponentHand.indexOf(card);
-                            GameState.opponentHand.splice(index, 1);
-                            
-                            if (card.rank === '8') {
-                                // AI chooses most common suit in hand
-                                GameState.currentSuit = this.getAIMostCommonSuit();
-                                this.addGameLog(`Suit changed to ${GameState.currentSuit}`, 'special');
-                                this.showNotification(`Suit changed to ${GameState.currentSuit}`, 'success');
-                            } else {
-                                GameState.currentSuit = card.suit;
-                                this.handleSpecialCard(card);
-                            }
-                        }
-                        
-                        if (cardsToPlay.some(card => card.isSpecial())) {
-                            if (this.soundEffects) this.soundEffects.special();
-                        } else {
-                            if (this.soundEffects) this.soundEffects.cardPlay();
-                        }
+                        // Play the card
+                        this.addGameLog(`${GameState.opponentName} plays ${cardToPlay.toString()}`, 'opponent');
+                        await this.delay(300);
+                        GameState.discardPile.push(cardToPlay);
+                        const index = GameState.opponentHand.indexOf(cardToPlay);
+                        GameState.opponentHand.splice(index, 1);
                         
                         // Check for win
                         if (GameState.opponentHand.length === 0) {
@@ -1134,27 +917,33 @@ class CrazyEightsGame {
                         }
                     }
                 } else {
-                    // Play the cards normally
-                    const cardsString = cardsToPlay.map(c => c.toString()).join(', ');
-                    this.addGameLog(`${GameState.opponentName} plays ${cardsString}`, 'opponent');
+                    // Play the card
+                    this.addGameLog(`${GameState.opponentName} plays ${cardToPlay.toString()}`, 'opponent');
+                    await this.delay(300);
+                    GameState.discardPile.push(cardToPlay);
+                    const index = GameState.opponentHand.indexOf(cardToPlay);
+                    GameState.opponentHand.splice(index, 1);
                     
-                    for (const card of cardsToPlay) {
-                        await this.delay(300);
-                        GameState.discardPile.push(card);
-                        const index = GameState.opponentHand.indexOf(card);
-                        GameState.opponentHand.splice(index, 1);
+                    if (cardToPlay.rank === '8') {
+                        GameState.currentSuit = this.getAIMostCommonSuit();
+                        this.addGameLog(`Suit changed to ${GameState.currentSuit}`, 'special');
+                        this.showNotification(`Suit changed to ${GameState.currentSuit}`, 'success');
+                    } else {
+                        GameState.currentSuit = cardToPlay.suit;
+                        this.handleSpecialCard(cardToPlay);
                         
-                        if (card.rank === '8') {
-                            GameState.currentSuit = this.getAIMostCommonSuit();
-                            this.addGameLog(`Suit changed to ${GameState.currentSuit}`, 'special');
-                            this.showNotification(`Suit changed to ${GameState.currentSuit}`, 'success');
-                        } else {
-                            GameState.currentSuit = card.suit;
-                            this.handleSpecialCard(card);
+                        // Handle Jack effect
+                        if (cardToPlay.rank === 'J') {
+                            this.addGameLog(`${GameState.opponentName} plays again!`, 'special');
+                            if (this.soundEffects) this.soundEffects.special();
+                            GameState.processingAction = false;
+                            this.updateUI();
+                            setTimeout(() => this.opponentTurn(), 2000);
+                            return;
                         }
                     }
                     
-                    if (cardsToPlay.some(card => card.isSpecial())) {
+                    if (cardToPlay.isSpecial()) {
                         if (this.soundEffects) this.soundEffects.special();
                     } else {
                         if (this.soundEffects) this.soundEffects.cardPlay();
@@ -1173,6 +962,7 @@ class CrazyEightsGame {
         
         GameState.processingAction = false;
         GameState.currentTurn = 'player';
+        GameState.mustDrawPenalty = GameState.stackCount > 0;
         this.updateUI();
     }
     
@@ -1211,6 +1001,11 @@ class CrazyEightsGame {
     endGame(winner) {
         GameState.gameActive = false;
         
+        // Create victory animation
+        if (winner === 'player') {
+            this.createVictoryEffect();
+        }
+        
         const modal = document.getElementById('gameModal');
         const modalTitle = document.getElementById('modalTitle');
         const modalMessage = document.getElementById('modalMessage');
@@ -1218,36 +1013,77 @@ class CrazyEightsGame {
         if (winner === 'player') {
             modalTitle.textContent = '🎉 VICTORY!';
             modalMessage.textContent = `Congratulations ${GameState.playerName}! You've won this round of Crazy Eights!`;
-            this.addGameLog(`=== ${GameState.playerName} WINS! ===`, 'special');
+            this.addGameLog(`${GameState.playerName} WINS!`, 'special');
             if (this.soundEffects) this.soundEffects.win();
-            this.createVictoryEffect();
         } else {
             modalTitle.textContent = '😔 DEFEAT';
             modalMessage.textContent = `${GameState.opponentName} has won this round. Better luck next time!`;
-            this.addGameLog(`=== ${GameState.opponentName} WINS ===`, 'special');
+            this.addGameLog(`${GameState.opponentName} WINS`, 'special');
             if (this.soundEffects) this.soundEffects.error();
         }
         
-        modal.classList.add('active');
+        // Calculate and display score
+        this.displayScore(winner);
+        
+        setTimeout(() => {
+            modal.classList.add('active');
+        }, winner === 'player' ? 2000 : 500);
+    }
+    
+    displayScore(winner) {
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const scoreDetails = document.getElementById('scoreDetails');
+        
+        if (scoreDisplay && scoreDetails) {
+            let playerScore = 0;
+            let opponentScore = 0;
+            
+            // Calculate scores based on remaining cards
+            GameState.playerHand.forEach(card => {
+                if (card.rank === '8') playerScore += 50;
+                else if (['J', 'Q', 'K'].includes(card.rank)) playerScore += 10;
+                else if (card.rank === 'A') playerScore += 1;
+                else playerScore += parseInt(card.rank) || 0;
+            });
+            
+            GameState.opponentHand.forEach(card => {
+                if (card.rank === '8') opponentScore += 50;
+                else if (['J', 'Q', 'K'].includes(card.rank)) opponentScore += 10;
+                else if (card.rank === 'A') opponentScore += 1;
+                else opponentScore += parseInt(card.rank) || 0;
+            });
+            
+            scoreDetails.innerHTML = `
+                <div>${GameState.playerName}: ${playerScore} points</div>
+                <div>${GameState.opponentName}: ${opponentScore} points</div>
+                <div style="margin-top: 10px; font-weight: bold; color: var(--primary-gold);">
+                    Winner gets: ${winner === 'player' ? opponentScore : playerScore} points!
+                </div>
+            `;
+            
+            scoreDisplay.style.display = 'block';
+        }
     }
     
     createVictoryEffect() {
+        const container = document.getElementById('victoryAnimation');
+        if (!container) return;
+        
+        container.classList.add('active');
+        
+        // Create victory text
+        const victoryText = document.createElement('div');
+        victoryText.className = 'victory-text';
+        victoryText.textContent = 'VICTORY!';
+        container.appendChild(victoryText);
+        
         // Create particle explosion
         for (let i = 0; i < 50; i++) {
             setTimeout(() => {
                 const particle = document.createElement('div');
-                particle.style.cssText = `
-                    position: fixed;
-                    width: 8px;
-                    height: 8px;
-                    background: #d4af37;
-                    border-radius: 50%;
-                    left: 50%;
-                    top: 50%;
-                    pointer-events: none;
-                    z-index: 1000;
-                    animation: particleExplosion 1s ease-out forwards;
-                `;
+                particle.className = 'victory-particle';
+                particle.style.left = '50%';
+                particle.style.top = '50%';
                 
                 const angle = (Math.PI * 2 * i) / 50;
                 const velocity = 200 + Math.random() * 200;
@@ -1255,29 +1091,16 @@ class CrazyEightsGame {
                 particle.style.setProperty('--x', `${Math.cos(angle) * velocity}px`);
                 particle.style.setProperty('--y', `${Math.sin(angle) * velocity}px`);
                 
-                document.body.appendChild(particle);
-                setTimeout(() => particle.remove(), 1000);
+                container.appendChild(particle);
+                setTimeout(() => particle.remove(), 2000);
             }, i * 20);
         }
         
-        // Add animation style if not exists
-        if (!document.getElementById('victory-animation-style')) {
-            const style = document.createElement('style');
-            style.id = 'victory-animation-style';
-            style.textContent = `
-                @keyframes particleExplosion {
-                    0% {
-                        transform: translate(-50%, -50%) scale(1);
-                        opacity: 1;
-                    }
-                    100% {
-                        transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(0);
-                        opacity: 0;
-                    }
-                }
-            `;
-            document.head.appendChild(style);
-        }
+        // Clear after animation
+        setTimeout(() => {
+            container.innerHTML = '';
+            container.classList.remove('active');
+        }, 3000);
     }
     
     showNotification(message, type = 'default') {
@@ -1305,22 +1128,20 @@ class CrazyEightsGame {
     
     newGame() {
         const modal = document.getElementById('gameModal');
+        const menuModal = document.getElementById('menuModal');
         if (modal) modal.classList.remove('active');
+        if (menuModal) menuModal.classList.remove('active');
         
         GameState.selectedCards = [];
         GameState.stackCount = 0;
         GameState.currentTurn = 'player';
         GameState.calledGame = false;
         GameState.gameActive = true;
-        GameState.turnSkipped = false;
+        GameState.playerGoesAgain = false;
+        GameState.opponentGoesAgain = false;
+        GameState.mustDrawPenalty = false;
         GameState.currentSuit = null;
         GameState.processingAction = false;
-        
-        // Clear game log
-        const logContent = document.getElementById('gameLogContent');
-        if (logContent) {
-            logContent.innerHTML = '';
-        }
         
         this.initDeck();
         this.dealCards();
@@ -1331,46 +1152,65 @@ class CrazyEightsGame {
 
 // Game Mode Manager
 class GameModeManager {
-    showModeSelection() {
-        const modal = document.getElementById('gameModal');
-        const modalTitle = document.getElementById('modalTitle');
-        const modalMessage = document.getElementById('modalMessage');
-        const modalAction = document.getElementById('modalAction');
-        
-        modalTitle.textContent = 'SELECT GAME MODE';
-        modalMessage.innerHTML = `
-            <div style="display: flex; flex-direction: column; gap: 15px;">
-                <button class="modal-btn" onclick="gameMode.selectMode('local')">🎮 LOCAL PLAY</button>
-                <button class="modal-btn" onclick="gameMode.selectMode('online')">🌐 ONLINE MULTIPLAYER</button>
-            </div>
-        `;
-        modalAction.style.display = 'none';
-        
-        modal.classList.add('active');
+    constructor() {
+        this.menuOpen = false;
     }
     
-    selectMode(mode) {
-        GameState.gameMode = mode;
-        const modal = document.getElementById('gameModal');
-        modal.classList.remove('active');
-        
-        document.getElementById('modalAction').style.display = 'block';
-        
-        if (mode === 'online') {
+    showMenu() {
+        const modal = document.getElementById('menuModal');
+        if (modal) {
+            modal.classList.add('active');
+            this.menuOpen = true;
+            
+            // Update sound button text
+            const soundText = document.getElementById('soundMenuText');
+            const soundIcon = document.getElementById('soundMenuIcon');
+            if (soundText) soundText.textContent = `SOUND: ${GameState.soundEnabled ? 'ON' : 'OFF'}`;
+            if (soundIcon) soundIcon.textContent = GameState.soundEnabled ? '🔊' : '🔇';
+        }
+    }
+    
+    closeMenu() {
+        const modal = document.getElementById('menuModal');
+        if (modal) {
+            modal.classList.remove('active');
+            this.menuOpen = false;
+        }
+    }
+    
+    newGame() {
+        this.closeMenu();
+        if (game) game.newGame();
+    }
+    
+    changeName() {
+        this.closeMenu();
+        if (game) game.promptPlayerName();
+    }
+    
+    showMultiplayer() {
+        this.closeMenu();
+        const lobbyContainer = document.getElementById('lobbyContainer');
+        if (lobbyContainer) {
+            lobbyContainer.classList.add('active');
+            // Initialize multiplayer if available
             if (typeof multiplayer !== 'undefined') {
                 multiplayer.connect();
             }
-        } else {
-            game.newGame();
         }
     }
     
     toggleSound() {
         GameState.soundEnabled = !GameState.soundEnabled;
         const soundBtn = document.getElementById('soundBtn');
+        const soundText = document.getElementById('soundMenuText');
+        const soundIcon = document.getElementById('soundMenuIcon');
+        
         if (soundBtn) {
             soundBtn.querySelector('.btn-icon').textContent = GameState.soundEnabled ? '🔊' : '🔇';
         }
+        if (soundText) soundText.textContent = `SOUND: ${GameState.soundEnabled ? 'ON' : 'OFF'}`;
+        if (soundIcon) soundIcon.textContent = GameState.soundEnabled ? '🔊' : '🔇';
         
         game.showNotification(GameState.soundEnabled ? 'Sound enabled' : 'Sound disabled', 'success');
     }
@@ -1380,7 +1220,7 @@ class GameModeManager {
         const modalTitle = document.getElementById('modalTitle');
         const modalMessage = document.getElementById('modalMessage');
         
-        modalTitle.textContent = '📖 GAME RULES';
+        modalTitle.textContent = '📖 GAME RULES - JAY\'S ULTIMATE EDITION';
         modalMessage.innerHTML = `
             <div style="text-align: left; max-height: 400px; overflow-y: auto; padding: 10px;">
                 <h3 style="color: #d4af37; margin-bottom: 10px;">🎯 Goal</h3>
@@ -1392,26 +1232,21 @@ class GameModeManager {
                     <li>Cannot end with 2 or 8</li>
                     <li>Can play multiple cards of same rank together</li>
                     <li>Match suit or rank to play cards</li>
+                    <li>Special cards must follow normal matching rules</li>
                 </ul>
                 
                 <h3 style="color: #d4af37; margin-bottom: 10px;">🃏 Special Cards</h3>
                 <div style="display: grid; gap: 8px;">
-                    <div><strong>8:</strong> Wild card - choose any suit</div>
-                    <div><strong>Jack:</strong> Skip next player's turn</div>
-                    <div><strong>Queen ♠:</strong> Next player draws 5 cards</div>
+                    <div><strong>8:</strong> Wild card - choose any suit (can't end with)</div>
+                    <div><strong>Jack:</strong> Play again (get another turn)</div>
+                    <div><strong>Queen ♠:</strong> Next player draws 5 cards (stackable)</div>
                     <div><strong>2s:</strong> Next player draws 2 cards (stackable)</div>
                 </div>
                 
                 <h3 style="color: #d4af37; margin: 15px 0 10px;">🔥 Stacking</h3>
-                <p>Queen♠ and 2s can be stacked! Play a 2 on Queen♠ to make it 7 cards, or stack multiple 2s. The player who can't continue the stack draws all accumulated cards.</p>
-                
-                <h3 style="color: #d4af37; margin: 15px 0 10px;">💡 Tips</h3>
-                <ul style="padding-left: 20px;">
-                    <li>Save 8s for when you're stuck</li>
-                    <li>Use Jacks strategically to skip opponent</li>
-                    <li>Stack 2s to force big draws</li>
-                    <li>Play multiple same-rank cards together</li>
-                </ul>
+                <p><strong>Queen♠ + 2s Combo:</strong> Play a 2 on Queen♠ to make it 7 cards, then 9, 11, etc.</p>
+                <p><strong>Pure 2s Combo:</strong> Stack 2s to make opponent draw 2, 4, 6, 8+ cards.</p>
+                <p>The player who can't continue the stack draws all accumulated cards.</p>
                 
                 <h3 style="color: #d4af37; margin: 15px 0 10px;">⌨️ Keyboard Shortcuts</h3>
                 <div style="display: grid; gap: 5px;">

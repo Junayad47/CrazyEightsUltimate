@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crazy Eights - Ultimate Edition</title>
+    <title>Crazy Eights - Jay's Ultimate Edition</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <!-- Loading Screen -->
     <div class="loading-screen" id="loadingScreen">
         <div class="loading-logo">CRAZY EIGHTS</div>
-        <div class="loading-subtitle">ULTIMATE EDITION</div>
+        <div class="loading-subtitle">JAY'S ULTIMATE EDITION</div>
         <div class="loading-bar">
             <div class="loading-progress"></div>
         </div>
@@ -23,10 +23,23 @@
     
     <!-- Main Game Container -->
     <div class="game-container">
-        <!-- Header -->
+        <!-- Header with Game Status -->
         <header class="game-header">
             <div class="header-left">
                 <h1 class="game-title">🃏 CRAZY EIGHTS</h1>
+                <!-- Game Status Panel -->
+                <div class="status-panel">
+                    <div class="status-item">
+                        <span class="status-icon">🎯</span>
+                        <span class="status-label">Selected:</span>
+                        <span class="status-value" id="selectedCount">0</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-icon">📦</span>
+                        <span class="status-label">Stack:</span>
+                        <span class="status-value" id="drawStackCount">0</span>
+                    </div>
+                </div>
             </div>
             <div class="header-center">
                 <div class="turn-indicator" id="turnIndicator">
@@ -35,17 +48,17 @@
                 </div>
             </div>
             <div class="header-right">
-                <button class="header-btn" onclick="gameMode.showModeSelection()">
-                    <span class="btn-icon">🎮</span>
-                    <span class="btn-text">MODE</span>
+                <!-- Game Log -->
+                <div class="mini-game-log">
+                    <div class="game-log-content" id="gameLogContent"></div>
+                </div>
+                <button class="header-btn" onclick="gameMode.showMenu()">
+                    <span class="btn-icon">☰</span>
+                    <span class="btn-text">MENU</span>
                 </button>
                 <button class="header-btn" onclick="gameMode.toggleSound()" id="soundBtn">
                     <span class="btn-icon">🔊</span>
                     <span class="btn-text">SOUND</span>
-                </button>
-                <button class="header-btn" onclick="gameMode.showRules()">
-                    <span class="btn-icon">📖</span>
-                    <span class="btn-text">RULES</span>
                 </button>
             </div>
         </header>
@@ -58,7 +71,7 @@
                     <div class="player-avatar opponent">
                         <div class="avatar-icon">🤠</div>
                         <div class="card-counter">
-                            <span id="opponentCardCount">8</span> cards
+                            <span id="opponentName">Opponent</span>: <span id="opponentCardCount">8</span> cards
                         </div>
                     </div>
                 </div>
@@ -85,7 +98,7 @@
                         <div class="pile-label">DISCARD PILE</div>
                         <div class="card-pile discard-pile" id="discardPile"></div>
                         <div class="stack-indicator" id="stackIndicator" style="display: none;">
-                            <span class="stack-text">DRAW +</span>
+                            <span class="stack-text">MUST DRAW</span>
                             <span class="stack-count" id="stackCount">0</span>
                         </div>
                     </div>
@@ -102,7 +115,7 @@
                         <div class="player-avatar">
                             <div class="avatar-icon">🎩</div>
                             <div class="card-counter">
-                                <span id="playerCardCount">8</span> cards
+                                <span id="playerNameDisplay">Player</span>: <span id="playerCardCount">8</span> cards
                             </div>
                         </div>
                     </div>
@@ -132,57 +145,6 @@
                 </div>
             </div>
         </div>
-        
-        <!-- Side Panel -->
-        <div class="side-panel">
-            <div class="panel-section">
-                <h3 class="panel-title">GAME STATUS</h3>
-                <div class="status-grid">
-                    <div class="status-item">
-                        <span class="status-icon">🎯</span>
-                        <span class="status-label">Selected</span>
-                        <span class="status-value" id="selectedCount">0</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="status-icon">📦</span>
-                        <span class="status-label">Draw Stack</span>
-                        <span class="status-value" id="drawStackCount">0</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="panel-section">
-                <h3 class="panel-title">SPECIAL CARDS</h3>
-                <div class="rules-quick">
-                    <div class="rule-item">
-                        <span class="rule-card">8</span>
-                        <span class="rule-desc">Wild (Choose Suit)</span>
-                    </div>
-                    <div class="rule-item">
-                        <span class="rule-card">J</span>
-                        <span class="rule-desc">Skip Opponent</span>
-                    </div>
-                    <div class="rule-item">
-                        <span class="rule-card">Q♠</span>
-                        <span class="rule-desc">Draw 5</span>
-                    </div>
-                    <div class="rule-item">
-                        <span class="rule-card">2</span>
-                        <span class="rule-desc">Draw 2</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="panel-section">
-                <h3 class="panel-title">TIPS</h3>
-                <div style="font-size: 11px; color: #a0886c; line-height: 1.4;">
-                    • Click any card to auto-select all same rank<br>
-                    • Jacks let you play again<br>
-                    • Press 'A' to select all playable same-rank cards<br>
-                    • Can't end with 2 or 8
-                </div>
-            </div>
-        </div>
     </div>
     
     <!-- Multiplayer Lobby -->
@@ -206,7 +168,44 @@
     <!-- Notification System -->
     <div class="notification" id="notification"></div>
     
-    <!-- Game Modal -->
+    <!-- Game Menu Modal -->
+    <div class="modal" id="menuModal">
+        <div class="modal-content menu-modal">
+            <div class="modal-header">
+                <h2 class="modal-title">GAME MENU</h2>
+            </div>
+            <div class="modal-body">
+                <div class="menu-options">
+                    <button class="menu-btn" onclick="gameMode.newGame()">
+                        <span class="menu-icon">🎮</span>
+                        <span>NEW GAME</span>
+                    </button>
+                    <button class="menu-btn" onclick="gameMode.changeName()">
+                        <span class="menu-icon">✏️</span>
+                        <span>CHANGE NAME</span>
+                    </button>
+                    <button class="menu-btn" onclick="gameMode.showMultiplayer()">
+                        <span class="menu-icon">🌐</span>
+                        <span>MULTIPLAYER</span>
+                    </button>
+                    <button class="menu-btn" onclick="gameMode.showRules()">
+                        <span class="menu-icon">📖</span>
+                        <span>RULES</span>
+                    </button>
+                    <button class="menu-btn" onclick="gameMode.toggleSound()">
+                        <span class="menu-icon" id="soundMenuIcon">🔊</span>
+                        <span id="soundMenuText">SOUND: ON</span>
+                    </button>
+                    <button class="menu-btn cancel" onclick="gameMode.closeMenu()">
+                        <span class="menu-icon">✖️</span>
+                        <span>CLOSE</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Win/Game Over Modal -->
     <div class="modal" id="gameModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -214,13 +213,21 @@
             </div>
             <div class="modal-body">
                 <p id="modalMessage"></p>
+                <div class="score-display" id="scoreDisplay" style="display: none;">
+                    <h3>Final Score</h3>
+                    <div class="score-details" id="scoreDetails"></div>
+                </div>
             </div>
             <div class="modal-footer">
-                <button class="modal-btn" id="modalAction" onclick="game.newGame()">NEW GAME</button>
+                <button class="modal-btn" onclick="game.newGame()">NEW GAME</button>
+                <button class="modal-btn" onclick="gameMode.showMenu()">MENU</button>
                 <button class="modal-btn secondary" onclick="closeModal()">CLOSE</button>
             </div>
         </div>
     </div>
+    
+    <!-- Victory Animation Container -->
+    <div id="victoryAnimation" class="victory-animation"></div>
 
     <!-- Three.js for 3D Effects -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -235,7 +242,8 @@
         window.addEventListener('load', () => {
             setTimeout(() => {
                 document.getElementById('loadingScreen').classList.add('hidden');
-                game.newGame();
+                // Show menu first or start game directly
+                gameMode.showMenu();
             }, 2000);
         });
     </script>
