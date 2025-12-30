@@ -23,12 +23,15 @@
     
     <!-- Main Game Container -->
     <div class="game-container">
-        <!-- Header with Game Status -->
+        <!-- Enhanced Header with Full Game Status -->
         <header class="game-header">
-            <div class="header-left">
+            <div class="header-section">
                 <h1 class="game-title">🃏 CRAZY EIGHTS</h1>
-                <!-- Game Status Panel -->
-                <div class="status-panel">
+            </div>
+            
+            <!-- Comprehensive Game Status Panel -->
+            <div class="game-status-bar">
+                <div class="status-group">
                     <div class="status-item">
                         <span class="status-icon">🎯</span>
                         <span class="status-label">Selected:</span>
@@ -37,21 +40,24 @@
                     <div class="status-item">
                         <span class="status-icon">📦</span>
                         <span class="status-label">Stack:</span>
-                        <span class="status-value" id="drawStackCount">0</span>
+                        <span class="status-value penalty" id="drawStackCount">0</span>
+                    </div>
+                </div>
+                
+                <div class="turn-indicator" id="turnIndicator">
+                    <span class="turn-label">CURRENT TURN</span>
+                    <span class="turn-value" id="currentTurn">Jay's TURN</span>
+                </div>
+                
+                <div class="status-group">
+                    <div class="status-item">
+                        <span class="status-label">Suit changed to:</span>
+                        <span class="status-value suit-display" id="currentSuitDisplay">-</span>
                     </div>
                 </div>
             </div>
-            <div class="header-center">
-                <div class="turn-indicator" id="turnIndicator">
-                    <span class="turn-label">CURRENT TURN</span>
-                    <span class="turn-value" id="currentTurn">YOUR TURN</span>
-                </div>
-            </div>
-            <div class="header-right">
-                <!-- Game Log -->
-                <div class="mini-game-log">
-                    <div class="game-log-content" id="gameLogContent"></div>
-                </div>
+            
+            <div class="header-section">
                 <button class="header-btn" onclick="gameMode.showMenu()">
                     <span class="btn-icon">☰</span>
                     <span class="btn-text">MENU</span>
@@ -63,6 +69,14 @@
             </div>
         </header>
         
+        <!-- Game Log Panel -->
+        <div class="game-log-panel">
+            <div class="game-log-header">GAME LOG</div>
+            <div class="game-log-content" id="gameLogContent">
+                <div class="log-entry">Game started - shuffling deck...</div>
+            </div>
+        </div>
+        
         <!-- Game Table -->
         <div class="game-table">
             <!-- Opponent Area -->
@@ -71,51 +85,59 @@
                     <div class="player-avatar opponent">
                         <div class="avatar-icon">🤠</div>
                         <div class="card-counter">
-                            <span id="opponentName">Opponent</span>: <span id="opponentCardCount">8</span> cards
+                            <span id="opponentName">Billy the Kid</span>: <span id="opponentCardCount">6</span> cards
                         </div>
                     </div>
                 </div>
                 <div class="opponent-hand" id="opponentHand"></div>
             </div>
             
-            <!-- Center Play Area -->
+            <!-- Center Play Area with Labels -->
             <div class="play-area">
                 <div class="deck-container">
                     <!-- Draw Pile -->
                     <div class="deck-section">
-                        <div class="pile-label">DRAW PILE</div>
                         <div class="card-pile draw-pile" id="drawPile" onclick="game.drawCard()">
                             <div class="card card-back">
                                 <div class="card-pattern"></div>
                                 <div class="card-center">DRAW</div>
-                                <div class="card-count" id="drawPileCount">36</div>
+                                <div class="card-count" id="drawPileCount">35</div>
                             </div>
                         </div>
+                        <div class="pile-label">DRAW PILE</div>
                     </div>
                     
                     <!-- Discard Pile -->
                     <div class="deck-section">
-                        <div class="pile-label">DISCARD PILE</div>
                         <div class="card-pile discard-pile" id="discardPile"></div>
-                        <div class="stack-indicator" id="stackIndicator" style="display: none;">
-                            <span class="stack-text">MUST DRAW</span>
-                            <span class="stack-count" id="stackCount">0</span>
-                        </div>
+                        <div class="pile-label">DISCARD PILE</div>
                     </div>
+                </div>
+                
+                <!-- Stack Indicator -->
+                <div class="stack-indicator" id="stackIndicator" style="display: none;">
+                    <div class="stack-alert">⚠️ PENALTY STACK</div>
+                    <div class="stack-message">
+                        <span id="penaltyPlayer">Next player</span> must draw 
+                        <span class="stack-count" id="stackCount">0</span> cards!
+                    </div>
+                    <div class="stack-hint">Play a 2 or Q♠ to add to stack, or draw to accept penalty</div>
                 </div>
             </div>
             
             <!-- Player Area -->
             <div class="player-section">
-                <div class="player-hand-container">
-                    <div class="player-hand" id="playerHand"></div>
+                <div class="player-hand-wrapper">
+                    <div class="player-hand-container">
+                        <div class="player-hand" id="playerHand"></div>
+                    </div>
                 </div>
                 <div class="player-controls">
                     <div class="player-info">
                         <div class="player-avatar">
                             <div class="avatar-icon">🎩</div>
                             <div class="card-counter">
-                                <span id="playerNameDisplay">Player</span>: <span id="playerCardCount">8</span> cards
+                                <span id="playerNameDisplay">Jay</span>: <span id="playerCardCount">7</span> cards
                             </div>
                         </div>
                     </div>
@@ -144,6 +166,43 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+    
+    <!-- Suit Selector Modal -->
+    <div id="suitSelector" class="suit-selector-modal">
+        <div class="suit-selector-content">
+            <h3>Choose a Suit for your Wild 8</h3>
+            <div class="suit-options">
+                <button class="suit-btn" data-suit="♠">
+                    <span class="suit-icon black">♠</span>
+                    <span>Spades</span>
+                </button>
+                <button class="suit-btn" data-suit="♥">
+                    <span class="suit-icon red">♥</span>
+                    <span>Hearts</span>
+                </button>
+                <button class="suit-btn" data-suit="♦">
+                    <span class="suit-icon red">♦</span>
+                    <span>Diamonds</span>
+                </button>
+                <button class="suit-btn" data-suit="♣">
+                    <span class="suit-icon black">♣</span>
+                    <span>Clubs</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Penalty Draw Modal -->
+    <div id="penaltyModal" class="penalty-modal">
+        <div class="penalty-content">
+            <h3 class="penalty-title">⚠️ PENALTY CARDS!</h3>
+            <p class="penalty-message">
+                You must draw <span id="penaltyAmount">0</span> cards!
+            </p>
+            <div class="penalty-countdown">Drawing in <span id="penaltyCountdown">3</span>...</div>
+            <button class="penalty-btn" onclick="game.acceptPenalty()">Draw Now</button>
         </div>
     </div>
     
@@ -242,8 +301,10 @@
         window.addEventListener('load', () => {
             setTimeout(() => {
                 document.getElementById('loadingScreen').classList.add('hidden');
-                // Show menu first or start game directly
-                gameMode.showMenu();
+                // Start game directly or show menu
+                if (typeof game !== 'undefined') {
+                    game.newGame();
+                }
             }, 2000);
         });
     </script>
